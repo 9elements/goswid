@@ -75,7 +75,9 @@ func main() {
 			_, err = uswid_input_tag.FromUSWID(input_file)
 			isUSWID = true
 		} else {
-			ErrorOut("input file extension not supported: %s\n", input_file_path)
+			fmt.Printf("input file extension not recognized, assuming USWID: %s\n", input_file_path)
+			_, err = uswid_input_tag.FromUSWID(input_file)
+			isUSWID = true
 		}
 		if err != nil {
 			ErrorOut("%s\n", err)
