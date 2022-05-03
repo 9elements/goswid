@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/9elements/goswid/pkg/uswid"
 	"github.com/veraison/swid"
@@ -33,27 +34,30 @@ func main() {
 	var err error
 	of_len := len(*output_file_path)
 	if of_len == 0 {
-		ErrorOut("no output file specfied")
+		ErrorOut("no output file specfied\n")
 	}
 	if len(input_file_paths) < 1 {
 		ErrorOut("no input files specified\n")
 	}
 
+	/* check file extension of output file */
 	var output_format FileType
-	if of_len >= 5 && (*output_file_path)[of_len-5:of_len] == ".json" {
+	of_parts := strings.Split(*output_file_path, ".")
+	if len(of_parts) < 2 {
+		ErrorOut("no file extensions found\n")
+	}
+	switch of_parts[len(of_parts)-1] {
+	case "json":
 		output_format = JSON
-	} else if of_len >= 4 && (*output_file_path)[of_len-4:of_len] == ".xml" {
+	case "xml":
 		output_format = XML
-	} else if of_len >= 5 && (*output_file_path)[of_len-5:of_len] == ".cbor" {
+	case "cbor":
 		output_format = CBOR
-	} else if of_len >= 6 && (*output_file_path)[of_len-6:of_len] == ".uswid" {
+	case "uswid":
 		output_format = USWID
-	} else {
+	default:
 		ErrorOut("output file extension not supported\n")
 	}
-	//if (output_format != uswid) && (len(input_file_paths) > 1) {
-	//	ErrorOut("multiple input files are only supported in conjunction with the .uswid output file extension\n")
-	//}
 
 	var uswid_input_tag uswid.UswidSoftwareIdentity
 	for _, input_file_path := range input_file_paths {
@@ -62,26 +66,27 @@ func main() {
 			ErrorOut("%s\n", err)
 		}
 
-		if_len := len(input_file_path)
+		/* check file extension of input file */
 		isUSWID := false
 		var input_tag swid.SoftwareIdentity
-		if if_len >= 5 && input_file_path[if_len-5:if_len] == ".json" {
+		if_parts := strings.Split(input_file_path, ".")
+		switch if_parts[len(if_parts)-1] {
+		case "json":
 			err = input_tag.FromJSON(input_file)
-		} else if if_len >= 4 && input_file_path[if_len-4:if_len] == ".xml" {
+		case "xml":
 			err = input_tag.FromXML(input_file)
-		} else if if_len >= 5 && input_file_path[if_len-5:if_len] == ".cbor" {
+		case "cbor":
 			err = input_tag.FromCBOR(input_file)
-		} else if if_len >= 6 && input_file_path[if_len-6:if_len] == ".uswid" {
-			_, err = uswid_input_tag.FromUSWID(input_file)
-			isUSWID = true
-		} else {
-			fmt.Printf("input file extension not recognized, assuming USWID: %s\n", input_file_path)
+		case "uswid":
+			fallthrough
+		default:
 			_, err = uswid_input_tag.FromUSWID(input_file)
 			isUSWID = true
 		}
 		if err != nil {
 			ErrorOut("%s\n", err)
 		}
+
 		if !isUSWID {
 			uswid_input_tag.Identities = append(uswid_input_tag.Identities, input_tag)
 		}
