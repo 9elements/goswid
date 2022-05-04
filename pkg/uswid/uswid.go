@@ -112,13 +112,20 @@ func (uswid UswidSoftwareIdentity) ToUSWID(compress bool) ([]byte, error) {
 
 func (uswid UswidSoftwareIdentity) ToJSON() ([]byte, error) {
 	var json_buf []byte
-	for _, id := range uswid.Identities {
+	json_buf = append(json_buf, '[')
+	json_buf = append(json_buf, ' ')
+	for i, id := range uswid.Identities {
 		buf, err := id.ToJSON()
 		if err != nil {
 			return nil, fmt.Errorf("convert to JSON: %w", err)
 		}
 		json_buf = append(json_buf, buf...)
+		if i < len(uswid.Identities)-1 {
+			json_buf = append(json_buf, ',')
+		}
 	}
+	json_buf = append(json_buf, ' ')
+	json_buf = append(json_buf, ']')
 	return json_buf, nil
 }
 
