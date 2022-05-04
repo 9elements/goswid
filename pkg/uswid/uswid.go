@@ -79,7 +79,7 @@ func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (offset int, err erro
 
 func (uswid UswidSoftwareIdentity) ToUSWID(compress bool) ([]byte, error) {
 	var header [16+1+2+4+1]byte
-	copy(header[:16], magic) 
+	copy(header[:16], magic)
 	header[16] = 2
 	binary.LittleEndian.PutUint16(header[17:19], 23)
 
