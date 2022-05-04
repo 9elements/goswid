@@ -20,8 +20,8 @@ const (
 	USWID
 )
 
-var output_file_path *string = flag.String("o", "", "output file")
-var compress *bool = flag.Bool("c", false, "compress output, only possible with uswid file output extension")
+var output_file_path *string = flag.String("o", "", "output file, either .json .xml .cbor or .uswid file")
+var compress *bool = flag.Bool("c", false, "compress output, only possible with .uswid file as output")
 
 func ErrorOut(format string, args ...interface{}) {
 	fmt.Printf(format, args...)
