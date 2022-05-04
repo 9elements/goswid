@@ -111,37 +111,37 @@ func (uswid UswidSoftwareIdentity) ToUSWID(compress bool) ([]byte, error) {
 }
 
 func (uswid UswidSoftwareIdentity) ToJSON() ([]byte, error) {
-	var header []byte
+	var json_buf []byte
 	for _, id := range uswid.Identities {
 		buf, err := id.ToJSON()
 		if err != nil {
 			return nil, fmt.Errorf("convert to JSON: %w", err)
 		}
-		header = append(header, buf...)
+		json_buf = append(json_buf, buf...)
 	}
-	return header, nil
+	return json_buf, nil
 }
 
 func (uswid UswidSoftwareIdentity) ToXML() ([]byte, error) {
-	var header []byte
+	var xml_buf []byte
 	for _, id := range uswid.Identities {
 		buf, err := id.ToXML()
 		if err != nil {
 			return nil, fmt.Errorf("convert to XML: %w", err)
 		}
-		header = append(header, buf...)
+		xml_buf = append(xml_buf, buf...)
 	}
-	return header, nil
+	return xml_buf, nil
 }
 
 func (uswid UswidSoftwareIdentity) ToCBOR() ([]byte, error) {
-	var header []byte
+	var cbor_buf []byte
 	for _, id := range uswid.Identities {
 		buf, err := id.ToCBOR()
 		if err != nil {
 			return nil, fmt.Errorf("convert to CBOR: %w", err)
 		}
-		header = append(header, buf...)
+		cbor_buf = append(cbor_buf, buf...)
 	}
-	return header, nil
+	return cbor_buf, nil
 }
