@@ -43,6 +43,10 @@ func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (offset int, err erro
 		if err != nil {
 			return -1, fmt.Errorf("create zlib reader: %w", err)
 		}
+		// we can't just use id.FromCBOR, since we will not know the size of the
+		// CBOR payload like that. but we need the size, otherwise we don't know
+		// the offset to the next CBOR payload. so we need to create the
+		// CBOR decoder ourselfs instead of using github.com/veraison/swid
 		decoder := cbor.NewDecoder(rd)
 		for uint32(decoder.NumBytesRead()) < payload_len {
 			var id swid.SoftwareIdentity
