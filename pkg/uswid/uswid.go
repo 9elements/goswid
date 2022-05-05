@@ -132,6 +132,9 @@ func (uswid UswidSoftwareIdentity) ToJSON() ([]byte, error) {
 func (uswid UswidSoftwareIdentity) ToXML() ([]byte, error) {
 	var xml_buf []byte
 	for _, id := range uswid.Identities {
+		id.XMLName.Space = "http://standards.iso.org/iso/19770/-2/2015/schema.xsd"
+		id.XMLName.Local = "SoftwareIdentity"
+
 		buf, err := id.ToXML()
 		if err != nil {
 			return nil, fmt.Errorf("convert to XML: %w", err)
