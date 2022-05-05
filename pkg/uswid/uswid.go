@@ -79,11 +79,11 @@ func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (offset int, err erro
 
 func (uswid UswidSoftwareIdentity) ToUSWID(compress bool) ([]byte, error) {
 	var header [16+1+2+4+1]byte
-	copy(header[:16], magic)
-	header[16] = 2
-	binary.LittleEndian.PutUint16(header[17:19], 24)
+	copy(header[:16], magic) // magic USWID value
+	header[16] = 2 // header version
+	binary.LittleEndian.PutUint16(header[17:19], 24) // header size
 
-	header[23] = 0x00
+	header[23] = 0x00 // flags
 	var cbor_writer bytes.Buffer
 	if compress {
 		header[23] |= 0x01
