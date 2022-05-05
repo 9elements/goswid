@@ -81,7 +81,7 @@ func (uswid UswidSoftwareIdentity) ToUSWID(compress bool) ([]byte, error) {
 	var header [16+1+2+4+1]byte
 	copy(header[:16], magic)
 	header[16] = 2
-	binary.LittleEndian.PutUint16(header[17:19], 23)
+	binary.LittleEndian.PutUint16(header[17:19], 24)
 
 	header[23] = 0x00
 	var cbor_writer bytes.Buffer
