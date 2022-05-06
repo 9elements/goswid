@@ -9,6 +9,7 @@ import (
 
 	"github.com/9elements/goswid/pkg/uswid"
 	"github.com/veraison/swid"
+	"github.com/google/uuid"
 )
 
 
@@ -22,6 +23,7 @@ const (
 
 var output_file_path *string = flag.String("o", "", "output file, either .json .xml .cbor or .uswid file")
 var compress *bool = flag.Bool("c", false, "compress output, only possible with .uswid file as output")
+var tag_uuidgen_name *string = flag.String("t", "", "generates a 16 byte type-5 SHA1 RFC 4122 UUID (possible use for tag-id)")
 
 func ErrorOut(format string, args ...interface{}) {
 	fmt.Printf(format, args...)
@@ -30,6 +32,11 @@ func ErrorOut(format string, args ...interface{}) {
 
 func main() {
 	flag.Parse()
+	if len(*tag_uuidgen_name) > 0 {
+		tag_uuid := uuid.NewSHA1(uuid.NameSpaceDNS, []byte(*tag_uuidgen_name))
+		fmt.Println(tag_uuid)
+		os.Exit(0)
+	}
 	input_file_paths := flag.Args()
 	var err error
 	of_len := len(*output_file_path)
