@@ -8,12 +8,12 @@ import (
 	"strings"
 
 	"github.com/9elements/goswid/pkg/uswid"
-	"github.com/veraison/swid"
 	"github.com/google/uuid"
+	"github.com/veraison/swid"
 )
 
-
 type FileType int
+
 const (
 	JSON FileType = iota
 	XML
@@ -100,14 +100,14 @@ func main() {
 	}
 	var output_buf []byte
 	switch output_format {
-		case JSON:
-			output_buf, err = uswid_input_tag.ToJSON()
-		case XML:
-			output_buf, err = uswid_input_tag.ToXML()
-		case USWID:
-			output_buf, err = uswid_input_tag.ToUSWID(*compress)
-		case CBOR:
-			output_buf, err = uswid_input_tag.ToCBOR()
+	case JSON:
+		output_buf, err = uswid_input_tag.ToJSON()
+	case XML:
+		output_buf, err = uswid_input_tag.ToXML()
+	case USWID:
+		output_buf, err = uswid_input_tag.ToUSWID(*compress)
+	case CBOR:
+		output_buf, err = uswid_input_tag.ToCBOR()
 	}
 	if err != nil {
 		ErrorOut("%s\n", err)

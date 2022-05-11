@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/veraison/swid"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/veraison/swid"
 )
 
 var magic []byte = []byte{0x53, 0x42, 0x4F, 0x4D, 0xD6, 0xBA, 0x2E, 0xAC, 0xA3, 0xE6, 0x7A, 0x52, 0xAA, 0xEE, 0x3B, 0xAF} // can't be const...
@@ -34,10 +34,10 @@ func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (offset int, err erro
 		return -1, errors.New("no known header version")
 	}
 	//header_len := binary.LittleEndian.Uint16(blob[offset+17:offset+19])
-	payload_len := binary.LittleEndian.Uint32(blob[offset+19:offset+23])
+	payload_len := binary.LittleEndian.Uint32(blob[offset+19 : offset+23])
 	flags := blob[offset+23]
 	if (flags & flagCompress) != 0 {
-		buf := bytes.NewBuffer(blob[offset+24:uint32(offset)+24+payload_len])
+		buf := bytes.NewBuffer(blob[offset+24 : uint32(offset)+24+payload_len])
 		rd, err := zlib.NewReader(buf)
 		defer rd.Close()
 		if err != nil {
@@ -58,7 +58,7 @@ func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (offset int, err erro
 		}
 	} else {
 		//err = uswid.FromCBOR(blob[offset+24:uint32(offset)+24+payload_len])
-		rd := bytes.NewBuffer(blob[offset+24:uint32(offset)+24+payload_len])
+		rd := bytes.NewBuffer(blob[offset+24 : uint32(offset)+24+payload_len])
 		if err != nil {
 			return -1, fmt.Errorf("create zlib reader: %w", err)
 		}
@@ -82,9 +82,9 @@ func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (offset int, err erro
 }
 
 func (uswid UswidSoftwareIdentity) ToUSWID(compress bool) ([]byte, error) {
-	var header [16+1+2+4+1]byte
-	copy(header[:16], magic) // magic USWID value
-	header[16] = 2 // header version
+	var header [16 + 1 + 2 + 4 + 1]byte
+	copy(header[:16], magic)                         // magic USWID value
+	header[16] = 2                                   // header version
 	binary.LittleEndian.PutUint16(header[17:19], 24) // header size
 
 	header[23] = 0x00 // flags
