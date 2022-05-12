@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/binary"
+	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -19,7 +21,7 @@ type UswidSoftwareIdentity struct {
 	Identities []swid.SoftwareIdentity
 }
 
-func (uswid *UswidSoftwareIdentity) FromCBOR(blob []byte, compressed bool) (err error) {
+func (uswid *UswidSoftwareIdentity) FromCBOR(blob []byte, compressed bool) error {
 	buf := bytes.NewBuffer(blob)
 	var decoder *cbor.Decoder
 	if compressed {
@@ -33,7 +35,7 @@ func (uswid *UswidSoftwareIdentity) FromCBOR(blob []byte, compressed bool) (err 
 	}
 	for {
 		var id swid.SoftwareIdentity
-		err = decoder.Decode(&id)
+		err := decoder.Decode(&id)
 		if err == io.EOF {
 			break
 		}
@@ -46,8 +48,9 @@ func (uswid *UswidSoftwareIdentity) FromCBOR(blob []byte, compressed bool) (err 
 }
 
 // returns the offset where the uswid data was found (first byte) in blob
-func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (offset int, err error) {
-	offset = bytes.Index(blob, magic)
+func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (int, error) {
+	var err error
+	offset := bytes.Index(blob, magic)
 	if offset == -1 {
 		return -1, errors.New("could not find uswid data")
 	}
@@ -70,6 +73,48 @@ func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (offset int, err erro
 		return -1, errors.New("malformed uswid or uswid contains no data")
 	}
 	return offset, nil
+}
+
+func (uswid *UswidSoftwareIdentity) FromJSON(json_data []byte) error {
+	if len(json_data) == 0 {
+		return errors.New("input data empty")
+	}
+
+	if json_data[0] == '[' && json_data[len(json_data)-1] == ']' {
+		var uswid_id UswidSoftwareIdentity
+		if err := json.Unmarshal(json_data, &uswid_id.Identities); err != nil {
+			return err
+		}
+		uswid.Identities = append(uswid.Identities, uswid_id.Identities...)
+	} else {
+		var id swid.SoftwareIdentity
+		if err := id.FromJSON(json_data); err != nil {
+			return err
+		}
+		uswid.Identities = append(uswid.Identities, id)
+	}
+	return nil
+}
+
+func (uswid *UswidSoftwareIdentity) FromXML(xml_data []byte) error {
+	if len(xml_data) == 0 {
+		return errors.New("input data empty")
+	}
+
+	var offset int64 = 0
+	for offset < int64(len(xml_data)) {
+		var id swid.SoftwareIdentity
+		xml_decoder := xml.NewDecoder(bytes.NewReader(xml_data[offset:]))
+		if err := xml_decoder.Decode(&id); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		uswid.Identities = append(uswid.Identities, id)
+		offset += xml_decoder.InputOffset()
+	}
+	return nil
 }
 
 func (uswid UswidSoftwareIdentity) ToUSWID(compress bool) ([]byte, error) {

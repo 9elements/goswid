@@ -9,7 +9,6 @@ import (
 
 	"github.com/9elements/goswid/pkg/uswid"
 	"github.com/google/uuid"
-	"github.com/veraison/swid"
 )
 
 type FileType int
@@ -74,29 +73,21 @@ func main() {
 		}
 
 		/* check file extension of input file */
-		isUSWID := false
-		var input_tag swid.SoftwareIdentity
 		if_parts := strings.Split(input_file_path, ".")
 		switch if_parts[len(if_parts)-1] {
 		case "json":
-			err = input_tag.FromJSON(input_file)
+			err = uswid_input_tag.FromJSON(input_file)
 		case "xml":
-			err = input_tag.FromXML(input_file)
+			err = uswid_input_tag.FromXML(input_file)
 		case "cbor":
 			err = uswid_input_tag.FromCBOR(input_file, false)
-			isUSWID = true
 		case "uswid":
 			fallthrough
 		default:
 			_, err = uswid_input_tag.FromUSWID(input_file)
-			isUSWID = true
 		}
 		if err != nil {
 			ErrorOut("%s\n", err)
-		}
-
-		if !isUSWID {
-			uswid_input_tag.Identities = append(uswid_input_tag.Identities, input_tag)
 		}
 	}
 	var output_buf []byte
