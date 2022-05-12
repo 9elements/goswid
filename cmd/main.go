@@ -22,7 +22,7 @@ const (
 )
 
 var output_file_path *string = flag.String("o", "", "output file, either .json .xml .cbor or .uswid file")
-var compress *bool = flag.Bool("c", false, "compress output, only possible with .uswid file as output")
+var compressZlib *bool = flag.Bool("z", false, "zlib (RFC 1950) compress output, only possible with .uswid file as output")
 var tag_uuidgen_name *string = flag.String("t", "", "generates a 16 byte type-5 SHA1 RFC 4122 UUID (possible use for tag-id)")
 
 func ErrorOut(format string, args ...interface{}) {
@@ -83,7 +83,8 @@ func main() {
 		case "xml":
 			err = input_tag.FromXML(input_file)
 		case "cbor":
-			err = input_tag.FromCBOR(input_file)
+			err = uswid_input_tag.FromCBOR(input_file, false)
+			isUSWID = true
 		case "uswid":
 			fallthrough
 		default:
@@ -105,9 +106,9 @@ func main() {
 	case XML:
 		output_buf, err = uswid_input_tag.ToXML()
 	case USWID:
-		output_buf, err = uswid_input_tag.ToUSWID(*compress)
+		output_buf, err = uswid_input_tag.ToUSWID(*compressZlib)
 	case CBOR:
-		output_buf, err = uswid_input_tag.ToCBOR()
+		output_buf, err = uswid_input_tag.ToCBOR(*compressZlib)
 	}
 	if err != nil {
 		ErrorOut("%s\n", err)

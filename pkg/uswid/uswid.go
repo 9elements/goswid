@@ -6,21 +6,43 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/veraison/swid"
 )
 
 var magic []byte = []byte{0x53, 0x42, 0x4F, 0x4D, 0xD6, 0xBA, 0x2E, 0xAC, 0xA3, 0xE6, 0x7A, 0x52, 0xAA, 0xEE, 0x3B, 0xAF} // can't be const...
-const flagCompress = 0x01
+const flagCompressZlib = 0x01
 
 type UswidSoftwareIdentity struct {
 	Identities []swid.SoftwareIdentity
 }
 
-func (uswid *UswidSoftwareIdentity) fromCBOR() (offset int, err error) {
-	//TODO
-	return 0, nil
+func (uswid *UswidSoftwareIdentity) FromCBOR(blob []byte, compressed bool) (err error) {
+	buf := bytes.NewBuffer(blob)
+	var decoder *cbor.Decoder
+	if compressed {
+		rd, err := zlib.NewReader(buf)
+		if err != nil {
+			return fmt.Errorf("create zlib reader: %w", err)
+		}
+		decoder = cbor.NewDecoder(rd)
+	} else {
+		decoder = cbor.NewDecoder(buf)
+	}
+	for {
+		var id swid.SoftwareIdentity
+		err = decoder.Decode(&id)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("decoding cbor: %w", err)
+		}
+		uswid.Identities = append(uswid.Identities, id)
+	}
+	return nil
 }
 
 // returns the offset where the uswid data was found (first byte) in blob
@@ -36,41 +58,10 @@ func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (offset int, err erro
 	//header_len := binary.LittleEndian.Uint16(blob[offset+17:offset+19])
 	payload_len := binary.LittleEndian.Uint32(blob[offset+19 : offset+23])
 	flags := blob[offset+23]
-	if (flags & flagCompress) != 0 {
-		buf := bytes.NewBuffer(blob[offset+24 : uint32(offset)+24+payload_len])
-		rd, err := zlib.NewReader(buf)
-		defer rd.Close()
-		if err != nil {
-			return -1, fmt.Errorf("create zlib reader: %w", err)
-		}
-		// we can't just use id.FromCBOR, since we will not know the size of the
-		// CBOR payload like that. but we need the size, otherwise we don't know
-		// the offset to the next CBOR payload. so we need to create the
-		// CBOR decoder ourselfs instead of using github.com/veraison/swid
-		decoder := cbor.NewDecoder(rd)
-		for uint32(decoder.NumBytesRead()) < payload_len {
-			var id swid.SoftwareIdentity
-			err = decoder.Decode(&id)
-			if err != nil {
-				return offset, fmt.Errorf("decoding cbor: %w", err)
-			}
-			uswid.Identities = append(uswid.Identities, id)
-		}
+	if (flags & flagCompressZlib) != 0 {
+		err = uswid.FromCBOR(blob[offset+24:uint32(offset)+24+payload_len], true)
 	} else {
-		//err = uswid.FromCBOR(blob[offset+24:uint32(offset)+24+payload_len])
-		rd := bytes.NewBuffer(blob[offset+24 : uint32(offset)+24+payload_len])
-		if err != nil {
-			return -1, fmt.Errorf("create zlib reader: %w", err)
-		}
-		decoder := cbor.NewDecoder(rd)
-		for uint32(decoder.NumBytesRead()) < payload_len {
-			var id swid.SoftwareIdentity
-			err = decoder.Decode(&id)
-			if err != nil {
-				return offset, fmt.Errorf("decoding cbor: %w", err)
-			}
-			uswid.Identities = append(uswid.Identities, id)
-		}
+		err = uswid.FromCBOR(blob[offset+24:uint32(offset)+24+payload_len], false)
 	}
 	if err != nil {
 		return -1, fmt.Errorf("extract CBOR: %w", err)
@@ -88,30 +79,15 @@ func (uswid UswidSoftwareIdentity) ToUSWID(compress bool) ([]byte, error) {
 	binary.LittleEndian.PutUint16(header[17:19], 24) // header size
 
 	header[23] = 0x00 // flags
-	var cbor_writer bytes.Buffer
 	if compress {
 		header[23] |= 0x01
-		zlib_writer := zlib.NewWriter(&cbor_writer)
-		defer zlib_writer.Close()
-		enc := cbor.NewEncoder(zlib_writer)
-		for _, id := range uswid.Identities {
-			err := enc.Encode(id)
-			if err != nil {
-				return nil, fmt.Errorf("cbor encode: %w", err)
-			}
-		}
-		binary.LittleEndian.PutUint32(header[19:23], uint32(cbor_writer.Len()))
-	} else {
-		enc := cbor.NewEncoder(&cbor_writer)
-		for _, id := range uswid.Identities {
-			err := enc.Encode(id)
-			if err != nil {
-				return nil, fmt.Errorf("cbor encode: %w", err)
-			}
-		}
-		binary.LittleEndian.PutUint32(header[19:23], uint32(cbor_writer.Len()))
 	}
-	return append(header[:], cbor_writer.Bytes()...), nil
+	cbor_buf, err := uswid.ToCBOR(compress)
+	if err != nil {
+		return nil, err
+	}
+	binary.LittleEndian.PutUint32(header[19:23], uint32(len(cbor_buf)))
+	return append(header[:], cbor_buf...), nil
 }
 
 func (uswid UswidSoftwareIdentity) ToJSON() ([]byte, error) {
@@ -148,7 +124,7 @@ func (uswid UswidSoftwareIdentity) ToXML() ([]byte, error) {
 	return xml_buf, nil
 }
 
-func (uswid UswidSoftwareIdentity) ToCBOR() ([]byte, error) {
+func (uswid UswidSoftwareIdentity) ToCBOR(compress bool) ([]byte, error) {
 	var cbor_buf []byte
 	for _, id := range uswid.Identities {
 		buf, err := id.ToCBOR()
@@ -157,5 +133,16 @@ func (uswid UswidSoftwareIdentity) ToCBOR() ([]byte, error) {
 		}
 		cbor_buf = append(cbor_buf, buf...)
 	}
-	return cbor_buf, nil
+	if compress {
+		var buf bytes.Buffer
+		zlib_writer := zlib.NewWriter(&buf)
+		_, err := zlib_writer.Write(cbor_buf)
+		if err != nil {
+			return nil, fmt.Errorf("cannot zlib compress CBOR data: %w", err)
+		}
+		zlib_writer.Close()
+		return buf.Bytes(), nil
+	} else {
+		return cbor_buf, nil
+	}
 }
