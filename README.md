@@ -8,7 +8,7 @@ It's currently capable of converting SWID/CoSWID between JSON, XML, CBOR and uSW
 
 If embedded into a coreboot build, one can use this tool to extract all SBOM Information out of an compiled coreboot image and save it in a format of choice. For example:
 ```sh
-go run cmd/main.go -o sbom.json coreboot.rom
+go run ./cmd/goswid convert -o sbom.json coreboot.rom
 ```
 
 for more Information, see: [python-uswid](https://github.com/hughsie/python-uswid)
