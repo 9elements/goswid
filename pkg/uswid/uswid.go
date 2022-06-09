@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/veraison/swid"
+	"github.com/google/uuid"
 )
 
 var magic []byte = []byte{0x53, 0x42, 0x4F, 0x4D, 0xD6, 0xBA, 0x2E, 0xAC, 0xA3, 0xE6, 0x7A, 0x52, 0xAA, 0xEE, 0x3B, 0xAF} // can't be const...
@@ -56,7 +58,7 @@ func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (int, error) {
 	}
 	header_version := blob[offset+16]
 	if header_version != 2 {
-		return -1, errors.New("no known header version")
+		return offset, errors.New("no known header version")
 	}
 	//header_len := binary.LittleEndian.Uint16(blob[offset+17:offset+19])
 	payload_len := binary.LittleEndian.Uint32(blob[offset+19 : offset+23])
@@ -68,9 +70,6 @@ func (uswid *UswidSoftwareIdentity) FromUSWID(blob []byte) (int, error) {
 	}
 	if err != nil {
 		return -1, fmt.Errorf("extract CBOR: %w", err)
-	}
-	if len(uswid.Identities) == 0 {
-		return -1, errors.New("malformed uswid or uswid contains no data")
 	}
 	return offset, nil
 }
@@ -114,6 +113,31 @@ func (uswid *UswidSoftwareIdentity) FromXML(xml_data []byte) error {
 		uswid.Identities = append(uswid.Identities, id)
 		offset += xml_decoder.InputOffset()
 	}
+	return nil
+}
+
+func (uswid *UswidSoftwareIdentity) FromPC(pc_data string, filename string) error {
+	pc_lines := strings.Split(pc_data, "\n")
+	var id swid.SoftwareIdentity
+	var software_meta swid.SoftwareMeta
+	for _, pc_line := range pc_lines {
+		field := strings.Split(pc_line, ":")
+		if (len(field) != 2) {
+			continue
+		}
+		value := strings.TrimSpace(field[1])
+		switch field[0] {
+		case "Name":
+			id.SoftwareName = value
+		case "Description":
+			software_meta.Summary = value
+		case "Version":
+			id.SoftwareVersion = value
+		}
+	}
+	id.AddSoftwareMeta(software_meta)
+	id.TagID = *swid.NewTagID(uuid.NewSHA1(uuid.NameSpaceDNS, []byte(filename)))
+	uswid.Identities = append(uswid.Identities, id)
 	return nil
 }
 

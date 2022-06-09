@@ -74,6 +74,9 @@ func (c *convertCmd) Run() error {
 		/* check file extension of input file */
 		if_parts := strings.Split(input_file_path, ".")
 		switch if_parts[len(if_parts)-1] {
+		case "pc":
+			pc_str := strings.ReplaceAll(string(input_file), "\r\n", "\n") // replace windows line endings with line feeds
+			err = uswid_input_tag.FromPC(pc_str, input_file_path)
 		case "json":
 			err = uswid_input_tag.FromJSON(input_file)
 		case "xml":
@@ -86,7 +89,7 @@ func (c *convertCmd) Run() error {
 			_, err = uswid_input_tag.FromUSWID(input_file)
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("parsing %s: %w", input_file_path, err)
 		}
 	}
 	var output_buf []byte
@@ -122,6 +125,9 @@ func (p *printCmd) Run() error {
 		/* check file extension of input file */
 		if_parts := strings.Split(input_file_path, ".")
 		switch if_parts[len(if_parts)-1] {
+		case "pc":
+			pc_str := strings.ReplaceAll(string(input_file), "\r\n", "\n") // replace windows line endings with line feeds
+			err = uswid_input_tag.FromPC(pc_str, input_file_path)
 		case "json":
 			err = uswid_input_tag.FromJSON(input_file)
 		case "xml":
@@ -134,12 +140,12 @@ func (p *printCmd) Run() error {
 			_, err = uswid_input_tag.FromUSWID(input_file)
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("parsing %s: %w", input_file_path, err)
 		}
 	}
 	output_buf, err := uswid_input_tag.ToJSON()
 	if err != nil {
-		return err
+		return fmt.Errorf("uswid_input_tag.ToJSON(): %w", err)
 	}
 	var prettyJSON bytes.Buffer
 	if err := json.Indent(&prettyJSON, []byte(output_buf), "", "    "); err != nil {
