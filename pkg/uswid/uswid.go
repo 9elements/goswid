@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/fxamacker/cbor/v2"
-	"github.com/veraison/swid"
+	"github.com/CodingVoid/swid"
 	"github.com/google/uuid"
 )
 

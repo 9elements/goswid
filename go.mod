@@ -6,10 +6,10 @@ require (
 	github.com/alecthomas/kong v0.5.0
 	github.com/fxamacker/cbor/v2 v2.3.0
 	github.com/google/uuid v1.3.0
-	github.com/veraison/swid v0.0.1-beta.6
 )
 
 require (
+	github.com/CodingVoid/swid v0.0.1-beta.6.0.20220622124420-b125a9ea6e9f // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
