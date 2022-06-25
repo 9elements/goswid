@@ -1,14 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
-	"bytes"
-	"encoding/json"
 
 	"github.com/9elements/goswid/pkg/uswid"
+	"github.com/CodingVoid/swid"
 	"github.com/google/uuid"
 )
 
@@ -30,6 +31,7 @@ var cli struct {
 }
 
 type convertCmd struct {
+	ParentFile      string `flag optional short:"p" name:"parent-file" help:"goswid will automatically add a link (with dependency link type) between this file and all other files" type:"existingfile"`
 	InputFiles   []string `arg required name:"input-file-paths" help:"Paths to imput files." type:"existingfile"`
 	OutputFile	 string   `flag required short:"o" name:"output-file" help:"output file, either .json .xml .cbor or .uswid file" type:"path"`
 	ZlibCompress bool     `flag optional short:"z" name:"zlib-compress" help:"zlib (RFC 1950) compress output, only possible with .uswid file as output" type:"path"`
@@ -40,73 +42,60 @@ type generateTagIDCmd struct {
 }
 
 type printCmd struct {
+	ParentFile      string `flag optional short:"p" name:"parent-file" help:"goswid will automatically add a link (with dependency link type) between this file and all other files" type:"existingfile"`
 	InputFiles []string `arg required name:"input-file-paths" help:"Paths to imput files." type:"existingfile"`
 }
 
 func (c *convertCmd) Run() error {
-	/* check file extension of output file */
+	var utag uswid.UswidSoftwareIdentity
+	for _, input_file_path := range c.InputFiles {
+		if err := utag.FromFile(input_file_path); err != nil {
+			return err
+		}
+	}
+
+	// if there is a topfile specified, we create a link between that CoSWID tag and all others
+	if c.ParentFile != "" {
+		var parent_tag uswid.UswidSoftwareIdentity
+		parent_tag.FromFile(c.ParentFile)
+		if len(parent_tag.Identities) > 1 {
+			return errors.New("Top tag should only be a single CoSWID tag")
+		}
+		stag := parent_tag.Identities[0]
+		for _, id := range utag.Identities {
+			link, err := swid.NewLink(id.TagID.URI(), *swid.NewRel(swid.RelRequires))
+			if err != nil {
+				return err
+			}
+			if err := stag.AddLink(*link); err != nil {
+				return err
+			}
+		}
+		utag.Identities = append(utag.Identities, stag)
+	}
+
+	// check file extension and put CoSWID tags into output file
 	var err error
-	var output_format FileType
+	var output_buf []byte
 	of_parts := strings.Split(c.OutputFile, ".")
 	if len(of_parts) < 2 {
 		return errors.New("no file extension found")
 	}
 	switch of_parts[len(of_parts)-1] {
 	case "json":
-		output_format = JSON
+		output_buf, err = utag.ToJSON()
 	case "xml":
-		output_format = XML
+		output_buf, err = utag.ToXML()
 	case "cbor":
-		output_format = CBOR
+		output_buf, err = utag.ToUSWID(c.ZlibCompress)
 	case "uswid":
-		output_format = USWID
+		output_buf, err = utag.ToCBOR(c.ZlibCompress)
 	default:
 		return errors.New("output file extension not supported")
-	}
-
-	var uswid_input_tag uswid.UswidSoftwareIdentity
-	for _, input_file_path := range c.InputFiles {
-		input_file, err := ioutil.ReadFile(input_file_path)
-		if err != nil {
-			return err
-		}
-
-		/* check file extension of input file */
-		if_parts := strings.Split(input_file_path, ".")
-		switch if_parts[len(if_parts)-1] {
-		case "pc":
-			pc_str := strings.ReplaceAll(string(input_file), "\r\n", "\n") // replace windows line endings with line feeds
-			err = uswid_input_tag.FromPC(pc_str, input_file_path)
-		case "json":
-			err = uswid_input_tag.FromJSON(input_file)
-		case "xml":
-			err = uswid_input_tag.FromXML(input_file)
-		case "cbor":
-			err = uswid_input_tag.FromCBOR(input_file, false)
-		case "uswid":
-			fallthrough
-		default:
-			_, err = uswid_input_tag.FromUSWID(input_file)
-		}
-		if err != nil {
-			return fmt.Errorf("parsing %s: %w", input_file_path, err)
-		}
-	}
-	var output_buf []byte
-	switch output_format {
-	case JSON:
-		output_buf, err = uswid_input_tag.ToJSON()
-	case XML:
-		output_buf, err = uswid_input_tag.ToXML()
-	case USWID:
-		output_buf, err = uswid_input_tag.ToUSWID(c.ZlibCompress)
-	case CBOR:
-		output_buf, err = uswid_input_tag.ToCBOR(c.ZlibCompress)
 	}
 	if err != nil {
 		return err
 	}
-
 	if err := ioutil.WriteFile(c.OutputFile, output_buf, 0644); err != nil {
 		return err
 	}
@@ -114,36 +103,33 @@ func (c *convertCmd) Run() error {
 }
 
 func (p *printCmd) Run() error {
-	/* check file extension of output file */
-	var uswid_input_tag uswid.UswidSoftwareIdentity
+	var utag uswid.UswidSoftwareIdentity
 	for _, input_file_path := range p.InputFiles {
-		input_file, err := ioutil.ReadFile(input_file_path)
-		if err != nil {
+		if err := utag.FromFile(input_file_path); err != nil {
 			return err
 		}
-
-		/* check file extension of input file */
-		if_parts := strings.Split(input_file_path, ".")
-		switch if_parts[len(if_parts)-1] {
-		case "pc":
-			pc_str := strings.ReplaceAll(string(input_file), "\r\n", "\n") // replace windows line endings with line feeds
-			err = uswid_input_tag.FromPC(pc_str, input_file_path)
-		case "json":
-			err = uswid_input_tag.FromJSON(input_file)
-		case "xml":
-			err = uswid_input_tag.FromXML(input_file)
-		case "cbor":
-			err = uswid_input_tag.FromCBOR(input_file, false)
-		case "uswid":
-			fallthrough
-		default:
-			_, err = uswid_input_tag.FromUSWID(input_file)
-		}
-		if err != nil {
-			return fmt.Errorf("parsing %s: %w", input_file_path, err)
-		}
 	}
-	output_buf, err := uswid_input_tag.ToJSON()
+
+	// if there is a topfile specified, we create a link between that CoSWID tag and all others
+	if p.ParentFile != "" {
+		var parent_tag uswid.UswidSoftwareIdentity
+		parent_tag.FromFile(p.ParentFile)
+		if len(parent_tag.Identities) > 1 {
+			return errors.New("Top tag should only be a single CoSWID tag")
+		}
+		stag := parent_tag.Identities[0]
+		for _, id := range utag.Identities {
+			link, err := swid.NewLink(id.TagID.URI(), *swid.NewRel(swid.RelRequires))
+			if err != nil {
+				return err
+			}
+			if err := stag.AddLink(*link); err != nil {
+				return err
+			}
+		}
+		utag.Identities = append(utag.Identities, stag)
+	}
+	output_buf, err := utag.ToJSON()
 	if err != nil {
 		return fmt.Errorf("uswid_input_tag.ToJSON(): %w", err)
 	}

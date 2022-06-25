@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"io/ioutil"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/CodingVoid/swid"
@@ -21,6 +22,35 @@ const flagCompressZlib = 0x01
 
 type UswidSoftwareIdentity struct {
 	Identities []swid.SoftwareIdentity
+}
+
+func (uswid *UswidSoftwareIdentity) FromFile(filepath string) error {
+	input_file, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return err
+	}
+
+	/* check file extension of input file */
+	if_parts := strings.Split(filepath, ".")
+	switch if_parts[len(if_parts)-1] {
+	case "pc":
+		pc_str := strings.ReplaceAll(string(input_file), "\r\n", "\n") // replace windows line endings with line feeds
+		err = uswid.FromPC(pc_str, filepath)
+	case "json":
+		err = uswid.FromJSON(input_file)
+	case "xml":
+		err = uswid.FromXML(input_file)
+	case "cbor":
+		err = uswid.FromCBOR(input_file, false)
+	case "uswid":
+		fallthrough
+	default:
+		_, err = uswid.FromUSWID(input_file)
+	}
+	if err != nil {
+		return fmt.Errorf("parsing %s: %w", filepath, err)
+	}
+	return nil
 }
 
 func (uswid *UswidSoftwareIdentity) FromCBOR(blob []byte, compressed bool) error {
@@ -137,6 +167,10 @@ func (uswid *UswidSoftwareIdentity) FromPC(pc_data string, filename string) erro
 	}
 	id.AddSoftwareMeta(software_meta)
 	id.TagID = *swid.NewTagID(uuid.NewSHA1(uuid.NameSpaceDNS, []byte(filename)))
+	if len(id.Entities) == 0 {
+		entity, _ := swid.NewEntity("goswid (auto-generated)", swid.RoleTagCreator)
+		id.AddEntity(*entity)
+	}
 	uswid.Identities = append(uswid.Identities, id)
 	return nil
 }
