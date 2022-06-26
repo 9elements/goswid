@@ -1,7 +1,5 @@
-github.com/CodingVoid/swid v0.0.1-beta.6.0.20220621140018-b7b21f7e9c85 h1:+ezU7i1GpLSOi+RhPdLCyw+AAnqQYCJKbMFRLYepQcU=
-github.com/CodingVoid/swid v0.0.1-beta.6.0.20220621140018-b7b21f7e9c85/go.mod h1:d5jt76uMNbTfQ+f2qU4Lt8RvWOTsv6PFgstIM1QdMH0=
-github.com/CodingVoid/swid v0.0.1-beta.6.0.20220622124420-b125a9ea6e9f h1:kQwug9z6nOmJT8pXr1kTpj/U8BciiFBW3xyTpzocO84=
-github.com/CodingVoid/swid v0.0.1-beta.6.0.20220622124420-b125a9ea6e9f/go.mod h1:228BbRrz8ewf/11cQ15lJOdZNz7kzKHZNKpHdfxnE2M=
+github.com/CodingVoid/swid v0.0.1-beta.6.0.20220626144021-b0c41388c299 h1:858/SnSfkg4sFp23pQoAnhtZ5tM8m3Fm2OMxEe1+dSw=
+github.com/CodingVoid/swid v0.0.1-beta.6.0.20220626144021-b0c41388c299/go.mod h1:228BbRrz8ewf/11cQ15lJOdZNz7kzKHZNKpHdfxnE2M=
 github.com/alecthomas/kong v0.5.0 h1:u8Kdw+eeml93qtMZ04iei0CFYve/WPcA5IFh+9wSskE=
 github.com/alecthomas/kong v0.5.0/go.mod h1:uzxf/HUh0tj43x1AyJROl3JT7SgsZ5m+icOv1csRhc0=
 github.com/alecthomas/repr v0.0.0-20210801044451-80ca428c5142 h1:8Uy0oSf5co/NZXje7U1z8Mpep++QJOldL2hs/sBQf48=
