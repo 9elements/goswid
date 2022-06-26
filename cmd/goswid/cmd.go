@@ -87,9 +87,9 @@ func (c *convertCmd) Run() error {
 	case "xml":
 		output_buf, err = utag.ToXML()
 	case "cbor":
-		output_buf, err = utag.ToUSWID(c.ZlibCompress)
-	case "uswid":
 		output_buf, err = utag.ToCBOR(c.ZlibCompress)
+	case "uswid":
+		output_buf, err = utag.ToUSWID(c.ZlibCompress)
 	default:
 		return errors.New("output file extension not supported")
 	}
