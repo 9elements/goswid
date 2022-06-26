@@ -31,7 +31,7 @@ var cli struct {
 }
 
 type convertCmd struct {
-	ParentFile      string `flag optional short:"p" name:"parent-file" help:"goswid will automatically add a link (with dependency link type) between this file and all other files" type:"existingfile"`
+	ParentTag      bool `flag optional short:"p" name:"parent-file" help:"goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID file and all other files"`
 	InputFiles   []string `arg required name:"input-file-paths" help:"Paths to imput files." type:"existingfile"`
 	OutputFile	 string   `flag required short:"o" name:"output-file" help:"output file, either .json .xml .cbor or .uswid file" type:"path"`
 	ZlibCompress bool     `flag optional short:"z" name:"zlib-compress" help:"zlib (RFC 1950) compress output, only possible with .uswid file as output" type:"path"`
@@ -42,7 +42,7 @@ type generateTagIDCmd struct {
 }
 
 type printCmd struct {
-	ParentFile      string `flag optional short:"p" name:"parent-file" help:"goswid will automatically add a link (with dependency link type) between this file and all other files" type:"existingfile"`
+	ParentTag      bool `flag optional short:"p" name:"parent-file" help:"goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID file and all other files"`
 	InputFiles []string `arg required name:"input-file-paths" help:"Paths to imput files." type:"existingfile"`
 }
 
@@ -55,15 +55,10 @@ func (c *convertCmd) Run() error {
 	}
 
 	// if there is a topfile specified, we create a link between that CoSWID tag and all others
-	if c.ParentFile != "" {
-		var parent_tag uswid.UswidSoftwareIdentity
-		parent_tag.FromFile(c.ParentFile)
-		if len(parent_tag.Identities) > 1 {
-			return errors.New("Top tag should only be a single CoSWID tag")
-		}
-		stag := parent_tag.Identities[0]
-		for _, id := range utag.Identities {
-			link, err := swid.NewLink(id.TagID.URI(), *swid.NewRel(swid.RelRequires))
+	if c.ParentTag {
+		stag := &utag.Identities[0]
+		for i := 1; i < len(utag.Identities); i++ {
+			link, err := swid.NewLink(utag.Identities[i].TagID.URI(), *swid.NewRel(swid.RelRequires))
 			if err != nil {
 				return err
 			}
@@ -71,7 +66,6 @@ func (c *convertCmd) Run() error {
 				return err
 			}
 		}
-		utag.Identities = append(utag.Identities, stag)
 	}
 
 	// check file extension and put CoSWID tags into output file
@@ -111,15 +105,10 @@ func (p *printCmd) Run() error {
 	}
 
 	// if there is a topfile specified, we create a link between that CoSWID tag and all others
-	if p.ParentFile != "" {
-		var parent_tag uswid.UswidSoftwareIdentity
-		parent_tag.FromFile(p.ParentFile)
-		if len(parent_tag.Identities) > 1 {
-			return errors.New("Top tag should only be a single CoSWID tag")
-		}
-		stag := parent_tag.Identities[0]
-		for _, id := range utag.Identities {
-			link, err := swid.NewLink(id.TagID.URI(), *swid.NewRel(swid.RelRequires))
+	if p.ParentTag {
+		stag := &utag.Identities[0]
+		for i := 1; i < len(utag.Identities); i++ {
+			link, err := swid.NewLink(utag.Identities[i].TagID.URI(), *swid.NewRel(swid.RelRequires))
 			if err != nil {
 				return err
 			}
@@ -127,7 +116,6 @@ func (p *printCmd) Run() error {
 				return err
 			}
 		}
-		utag.Identities = append(utag.Identities, stag)
 	}
 	output_buf, err := utag.ToJSON()
 	if err != nil {
