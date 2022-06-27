@@ -13,7 +13,7 @@ import (
 	"io/ioutil"
 
 	"github.com/fxamacker/cbor/v2"
-	"github.com/CodingVoid/swid"
+	"github.com/veraison/swid"
 	"github.com/google/uuid"
 )
 

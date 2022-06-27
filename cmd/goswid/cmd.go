@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/9elements/goswid/pkg/uswid"
-	"github.com/CodingVoid/swid"
+	"github.com/veraison/swid"
 	"github.com/google/uuid"
 )
 
