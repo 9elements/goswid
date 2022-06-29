@@ -109,6 +109,8 @@ func (uswid *UswidSoftwareIdentity) FromJSON(json_data []byte) error {
 		return errors.New("input data empty")
 	}
 
+	json_data = []byte(strings.TrimSpace(string(json_data)))
+
 	if json_data[0] == '[' && json_data[len(json_data)-1] == ']' {
 		var uswid_id UswidSoftwareIdentity
 		if err := json.Unmarshal(json_data, &uswid_id.Identities); err != nil {
