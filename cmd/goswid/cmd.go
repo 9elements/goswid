@@ -31,7 +31,7 @@ var cli struct {
 }
 
 type convertCmd struct {
-	ParentTag      bool `flag optional short:"p" name:"parent-file" help:"goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID file and all other files"`
+	ParentTag      bool `flag optional short:"p" name:"parent-file" help:"It is assumed that for all supplied files, the first tag of each file is a parent tag. goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID Tag and all other parent tags"`
 	InputFiles   []string `arg required name:"input-file-paths" help:"Paths to imput files." type:"existingfile"`
 	OutputFile	 string   `flag required short:"o" name:"output-file" help:"output file, either .json .xml .cbor or .uswid file" type:"path"`
 	ZlibCompress bool     `flag optional short:"z" name:"zlib-compress" help:"zlib (RFC 1950) compress output, only possible with .uswid file as output" type:"path"`
@@ -42,7 +42,7 @@ type generateTagIDCmd struct {
 }
 
 type printCmd struct {
-	ParentTag      bool `flag optional short:"p" name:"parent-file" help:"goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID file and all other files"`
+	ParentTag      bool `flag optional short:"p" name:"parent-file" help:"It is assumed that for all supplied files, the first tag of each file is a parent tag. goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID Tag and all other parent tags"`
 	InputFiles []string `arg required name:"input-file-paths" help:"Paths to imput files." type:"existingfile"`
 }
 
