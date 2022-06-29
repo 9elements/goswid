@@ -47,29 +47,12 @@ type printCmd struct {
 }
 
 func (c *convertCmd) Run() error {
-	var utag uswid.UswidSoftwareIdentity
-	for _, input_file_path := range c.InputFiles {
-		if err := utag.FromFile(input_file_path); err != nil {
-			return err
-		}
-	}
-
-	// if there is a topfile specified, we create a link between that CoSWID tag and all others
-	if c.ParentTag {
-		stag := &utag.Identities[0]
-		for i := 1; i < len(utag.Identities); i++ {
-			link, err := swid.NewLink(utag.Identities[i].TagID.URI(), *swid.NewRel(swid.RelRequires))
-			if err != nil {
-				return err
-			}
-			if err := stag.AddLink(*link); err != nil {
-				return err
-			}
-		}
+	utag, err := importFiles(c.InputFiles, c.ParentTag)
+	if err != nil {
+		return err
 	}
 
 	// check file extension and put CoSWID tags into output file
-	var err error
 	var output_buf []byte
 	of_parts := strings.Split(c.OutputFile, ".")
 	if len(of_parts) < 2 {
@@ -97,26 +80,11 @@ func (c *convertCmd) Run() error {
 }
 
 func (p *printCmd) Run() error {
-	var utag uswid.UswidSoftwareIdentity
-	for _, input_file_path := range p.InputFiles {
-		if err := utag.FromFile(input_file_path); err != nil {
-			return err
-		}
+	utag, err := importFiles(p.InputFiles, p.ParentTag)
+	if err != nil {
+		return err
 	}
 
-	// if there is a topfile specified, we create a link between that CoSWID tag and all others
-	if p.ParentTag {
-		stag := &utag.Identities[0]
-		for i := 1; i < len(utag.Identities); i++ {
-			link, err := swid.NewLink(utag.Identities[i].TagID.URI(), *swid.NewRel(swid.RelRequires))
-			if err != nil {
-				return err
-			}
-			if err := stag.AddLink(*link); err != nil {
-				return err
-			}
-		}
-	}
 	output_buf, err := utag.ToJSON()
 	if err != nil {
 		return fmt.Errorf("uswid_input_tag.ToJSON(): %w", err)
@@ -130,7 +98,30 @@ func (p *printCmd) Run() error {
 	return nil
 }
 
-func (g *generateTagIDCmd) Run() error {
+func (g *generateTagIDCmd) Run() {
 	fmt.Println(uuid.NewSHA1(uuid.NameSpaceDNS, []byte(g.UuidgenName)))
-	return nil
+}
+
+func importFiles(filepaths []string, parentTag bool) (*uswid.UswidSoftwareIdentity, error) {
+	var utag uswid.UswidSoftwareIdentity
+	for _, input_file_path := range filepaths {
+		first_tag_of_file := len(utag.Identities)
+		if err := utag.FromFile(input_file_path); err != nil {
+			return nil, err
+		}
+		// if there is a topfile specified, we create a link between that CoSWID tag and the first of each file, which we assume to be a parent CoSWID Tag above all others
+		if parentTag && first_tag_of_file > 0 {
+			stag := &utag.Identities[0]
+			required_tag := utag.Identities[first_tag_of_file]
+
+			link, err := swid.NewLink(required_tag.TagID.URI(), *swid.NewRel(swid.RelRequires))
+			if err != nil {
+				return nil, err
+			}
+			if err := stag.AddLink(*link); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return &utag, nil
 }
