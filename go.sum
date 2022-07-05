@@ -17,8 +17,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/veraison/swid v0.0.1-beta.6.0.20220627180615-b6ba3b07004f h1:dlxFKYY19xZ17kYfdlAOy41o4lHesQTfyPmoeH+kNZc=
-github.com/veraison/swid v0.0.1-beta.6.0.20220627180615-b6ba3b07004f/go.mod h1:d5jt76uMNbTfQ+f2qU4Lt8RvWOTsv6PFgstIM1QdMH0=
+github.com/veraison/swid v0.0.1-beta.6.0.20220705202954-86aeefe6c1aa h1:uQNh8r0i+070izSB26Olgc4VnRX6OCVrYuAZ0mg4ERM=
+github.com/veraison/swid v0.0.1-beta.6.0.20220705202954-86aeefe6c1aa/go.mod h1:d5jt76uMNbTfQ+f2qU4Lt8RvWOTsv6PFgstIM1QdMH0=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=

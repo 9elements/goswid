@@ -20,6 +20,7 @@ import (
 var magic []byte = []byte{0x53, 0x42, 0x4F, 0x4D, 0xD6, 0xBA, 0x2E, 0xAC, 0xA3, 0xE6, 0x7A, 0x52, 0xAA, 0xEE, 0x3B, 0xAF} // can't be const...
 const flagCompressZlib = 0x01
 
+// uSWID is essentially supposed to be a collection of CoSWID/SWID tags.
 type UswidSoftwareIdentity struct {
 	Identities []swid.SoftwareIdentity
 }

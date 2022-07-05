@@ -23,11 +23,19 @@ const (
 )
 
 var cli struct {
-	Debug         bool               `help:"Enable debug mode."`
+	Debug         bool               `help:"Enable debug mode"`
 
-	GenerateTagID generateTagIDCmd   `cmd help:"generates a 16 byte type-5 SHA1 RFC 4122 UUID (possible use for tag-id)"`
-	Print         printCmd           `cmd help:"print swid tag to stdout (in json format)"`
-	Convert       convertCmd         `cmd help:"convert between SWID/CoSWID and different file formats (json, xml, cbor, uswid)"`
+	GenerateTagID  generateTagIDCmd  `cmd help:"generates a 16 byte type-5 SHA1 RFC 4122 UUID (possible use for tag-id)"`
+	Print          printCmd          `cmd help:"print swid tag to stdout (in json format)"`
+	Convert        convertCmd        `cmd help:"convert between SWID/CoSWID and different file formats (json, xml, cbor, uswid)"`
+	AddPayloadFile addPayloadFileCmd `cmd help:"add payload file into an existing CoSWID tag"`
+
+}
+
+type addPayloadFileCmd struct {
+	PayloadFileName	string `flag required long:"name" name:"payload-file" help:"filename that should be added to the payload portion of the CoSWID tag"`
+	InputFile   string `flag required short:"i" name:"input-file" help:"Path to imput files." type:"existingfile"`
+	OutputFile	string `flag required short:"o" name:"output-file" help:"output file, either .json .xml .cbor or .uswid file" type:"path"`
 }
 
 type convertCmd struct {
@@ -46,34 +54,42 @@ type printCmd struct {
 	InputFiles []string `arg required name:"input-file-paths" help:"Paths to imput files." type:"existingfile"`
 }
 
+func (a *addPayloadFileCmd) Run() error {
+	var utag uswid.UswidSoftwareIdentity
+	//TODO program FromFile in swid library
+	err := utag.FromFile(a.InputFile)
+	if err != nil {
+		return err
+	}
+	if len(utag.Identities) != 1 {
+		return fmt.Errorf("uSWID file has %d CoSWID Identities, want only 1 Identity", len(utag.Identities))
+	}
+
+	var f swid.File
+	//f.Key = &key
+	//f.Location = location
+	f.FsName = a.PayloadFileName
+	//f.Root = root
+	//f.Size = &size
+	//f.FileVersion = fileVersion
+	//f.Hash.HashAlgID = hashAlgID
+	//f.Hash.HashValue = hashValue
+	payload := swid.NewPayload()
+	payload.AddFile(f)
+	utag.Identities[0].Payload = payload
+
+	if err := writeFile(a.OutputFile, false, utag); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *convertCmd) Run() error {
 	utag, err := importFiles(c.InputFiles, c.ParentTag)
 	if err != nil {
 		return err
 	}
-
-	// check file extension and put CoSWID tags into output file
-	var output_buf []byte
-	of_parts := strings.Split(c.OutputFile, ".")
-	if len(of_parts) < 2 {
-		return errors.New("no file extension found")
-	}
-	switch of_parts[len(of_parts)-1] {
-	case "json":
-		output_buf, err = utag.ToJSON()
-	case "xml":
-		output_buf, err = utag.ToXML()
-	case "cbor":
-		output_buf, err = utag.ToCBOR(c.ZlibCompress)
-	case "uswid":
-		output_buf, err = utag.ToUSWID(c.ZlibCompress)
-	default:
-		return errors.New("output file extension not supported")
-	}
-	if err != nil {
-		return err
-	}
-	if err := ioutil.WriteFile(c.OutputFile, output_buf, 0644); err != nil {
+	if err := writeFile(c.OutputFile, c.ZlibCompress, *utag); err != nil {
 		return err
 	}
 	return nil
@@ -100,6 +116,37 @@ func (p *printCmd) Run() error {
 
 func (g *generateTagIDCmd) Run() {
 	fmt.Println(uuid.NewSHA1(uuid.NameSpaceDNS, []byte(g.UuidgenName)))
+}
+
+func writeFile(filename string, zlib_compress bool, utag uswid.UswidSoftwareIdentity) error {
+	// check file extension and put CoSWID tags into output file
+	var output_buf []byte
+	of_parts := strings.Split(filename, ".")
+	if len(of_parts) < 2 {
+		return errors.New("no file extension found")
+	}
+
+	var err error
+	switch of_parts[len(of_parts)-1] {
+	case "json":
+		output_buf, err = utag.ToJSON()
+	case "xml":
+		output_buf, err = utag.ToXML()
+	case "cbor":
+		output_buf, err = utag.ToCBOR(zlib_compress)
+	case "uswid":
+		output_buf, err = utag.ToUSWID(zlib_compress)
+	default:
+		return errors.New("output file extension not supported")
+	}
+	if err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile(filename, output_buf, 0644); err != nil {
+		return err
+	}
+	return nil
 }
 
 func importFiles(filepaths []string, parentTag bool) (*uswid.UswidSoftwareIdentity, error) {
