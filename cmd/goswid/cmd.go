@@ -74,9 +74,10 @@ func (a *addPayloadFileCmd) Run() error {
 	//f.FileVersion = fileVersion
 	//f.Hash.HashAlgID = hashAlgID
 	//f.Hash.HashValue = hashValue
-	payload := swid.NewPayload()
-	payload.AddFile(f)
-	utag.Identities[0].Payload = payload
+	if utag.Identities[0].Payload == nil {
+		utag.Identities[0].Payload = swid.NewPayload()
+	}
+	utag.Identities[0].Payload.AddFile(f)
 
 	if err := writeFile(a.OutputFile, false, utag); err != nil {
 		return err
