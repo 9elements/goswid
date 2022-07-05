@@ -33,7 +33,7 @@ var cli struct {
 }
 
 type addPayloadFileCmd struct {
-	PayloadFileName	string `flag required long:"name" name:"payload-file" help:"filename that should be added to the payload portion of the CoSWID tag"`
+	PayloadFileName	string `flag required name:"name" help:"filename that should be added to the payload portion of the CoSWID tag"`
 	InputFile   string `flag required short:"i" name:"input-file" help:"Path to imput files." type:"existingfile"`
 	OutputFile	string `flag required short:"o" name:"output-file" help:"output file, either .json .xml .cbor or .uswid file" type:"path"`
 }
