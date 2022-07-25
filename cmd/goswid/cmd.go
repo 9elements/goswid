@@ -47,7 +47,7 @@ type addPayloadFileCmd struct {
 
 type convertCmd struct {
 	ParentTag    string   `flag optional name:"parent" help:"It is assumed that for all supplied files, the first tag of each file is a parent tag. goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID Tag and all other parent tags" type="existingfile"`
-	InputTags   []string  `flag optional name:"input" help:"Paths to imput files (comma seperated)" type:"existingfile"`
+	InputTags   []string  `flag optional short:"i" name:"input" help:"Paths to imput files (comma seperated)" type:"existingfile"`
 	RequiredTags []string `flag optional name:"requires" help:"Paths to imput files (comma seperated), which should have a 'required' link to ParentTag" type:"existingfile"`
 	CompilerTags []string `flag optional name:"compiler" help:"Paths to imput files (comma seperated), which should have a 'Compiler' link to ParentTag" type:"existingfile"`
 	OutputFile	 string   `flag required short:"o" name:"output" help:"output file, either .json .xml .cbor .uswid file or a dash '-' for stdout" type:"path"`
@@ -61,7 +61,7 @@ type generateTagIDCmd struct {
 
 type printCmd struct {
 	ParentTag    string   `flag optional name:"parent" help:"It is assumed that for all supplied files, the first tag of each file is a parent tag. goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID Tag and all other parent tags" type="existingfile"`
-	InputTags   []string  `flag optional name:"input" help:"Paths to imput files (comma seperated)" type:"existingfile"`
+	InputTags   []string  `flag optional short:"i" name:"input" help:"Paths to imput files (comma seperated)" type:"existingfile"`
 	RequiredTags []string `flag optional name:"requires" help:"Paths to imput files (comma seperated), which should have a 'required' link to ParentTag" type:"existingfile"`
 	CompilerTags []string `flag optional name:"compiler" help:"Paths to imput files (comma seperated), which should have a 'Compiler' link to ParentTag" type:"existingfile"`
 	OutputFormat string   `flag optional name:"output-format" help:"format in which to pretty print the output. currently only json"`
@@ -124,6 +124,9 @@ func (a *addPayloadFileCmd) Run() error {
 }
 
 func (c *convertCmd) Run() error {
+	if c.ParentTag == "" && len(c.CompilerTags) == 0 && len(c.RequiredTags) == 0 && len(c.InputTags) == 0 {
+		return errors.New("no input tags specified")
+	}
 	if c.ParentTag == "" && (len(c.CompilerTags) > 0 || len(c.RequiredTags) > 0) {
 		return errors.New("cannot have compiler or required tags without a parent to bind them to")
 	}
@@ -138,6 +141,9 @@ func (c *convertCmd) Run() error {
 }
 
 func (p *printCmd) Run() error {
+	if p.ParentTag == "" && len(p.CompilerTags) == 0 && len(p.RequiredTags) == 0 && len(p.InputTags) == 0 {
+		return errors.New("no input tags specified")
+	}
 	if p.ParentTag == "" && (len(p.CompilerTags) > 0 || len(p.RequiredTags) > 0) {
 		return errors.New("cannot have compiler or required tags without a parent to bind them to")
 	}
