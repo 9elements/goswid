@@ -29,7 +29,13 @@ var cli struct {
 	Print          printCmd          `cmd help:"print swid tag to stdout (in json format)"`
 	Convert        convertCmd        `cmd help:"convert between SWID/CoSWID and different file formats (json, xml, cbor, uswid)"`
 	AddPayloadFile addPayloadFileCmd `cmd help:"add payload file into an existing CoSWID tag"`
+	AddLicense     addLicenseCmd     `cmd help:"add license into an existing CoSWID tag"`
+}
 
+type addLicenseCmd struct {
+	LicenseHref	[]string `arg required help:"link to license (e.g. SPDX license link)"`
+	InputFile   string `flag required short:"i" name:"input-file" help:"Path to imput files." type:"existingfile"`
+	OutputFile	string `flag required short:"o" name:"output-file" help:"output file, either .json .xml .cbor or .uswid file" type:"path"`
 }
 
 type addPayloadFileCmd struct {
@@ -59,6 +65,31 @@ type printCmd struct {
 	RequiredTags []string `flag optional name:"requires" help:"Paths to imput files (comma seperated), which should have a 'required' link to ParentTag" type:"existingfile"`
 	CompilerTags []string `flag optional name:"compiler" help:"Paths to imput files (comma seperated), which should have a 'Compiler' link to ParentTag" type:"existingfile"`
 	OutputFormat string   `flag optional name:"output-format" help:"format in which to pretty print the output. currently only json"`
+}
+
+func (a *addLicenseCmd) Run() error {
+	var utag uswid.UswidSoftwareIdentity
+	//TODO program FromFile in swid library
+	err := utag.FromFile(a.InputFile)
+	if err != nil {
+		return err
+	}
+	if len(utag.Identities) != 1 {
+		return fmt.Errorf("uSWID file has %d CoSWID Identities, want only 1 Identity", len(utag.Identities))
+	}
+
+	for _, license := range a.LicenseHref {
+		var link *swid.Link
+		if link, err = swid.NewLink(license, *swid.NewRel(swid.RelLicense)); err != nil {
+			return err
+		}
+		utag.Identities[0].AddLink(*link)
+	}
+
+	if err := writeFile(a.OutputFile, "", false, utag); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (a *addPayloadFileCmd) Run() error {

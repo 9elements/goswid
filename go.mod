@@ -3,7 +3,7 @@ module github.com/9elements/goswid
 go 1.18
 
 require (
-	github.com/CodingVoid/swid v0.0.1-beta.6.0.20220725163924-277af5da05cb
+	github.com/CodingVoid/swid v0.0.1-beta.6.0.20220725180727-86c96903135d
 	github.com/alecthomas/kong v0.5.0
 	github.com/fxamacker/cbor/v2 v2.3.0
 	github.com/google/uuid v1.3.0
