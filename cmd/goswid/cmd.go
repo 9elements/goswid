@@ -1,15 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
 
 	"github.com/9elements/goswid/pkg/uswid"
-	"github.com/veraison/swid"
+	"github.com/CodingVoid/swid"
 	"github.com/google/uuid"
 )
 
@@ -40,9 +40,12 @@ type addPayloadFileCmd struct {
 }
 
 type convertCmd struct {
-	ParentTag      bool `flag optional short:"p" name:"parent-file" help:"It is assumed that for all supplied files, the first tag of each file is a parent tag. goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID Tag and all other parent tags"`
-	InputFiles   []string `arg required name:"input-file-paths" help:"Paths to imput files." type:"existingfile"`
-	OutputFile	 string   `flag required short:"o" name:"output-file" help:"output file, either .json .xml .cbor or .uswid file" type:"path"`
+	ParentTag    string   `flag optional name:"parent" help:"It is assumed that for all supplied files, the first tag of each file is a parent tag. goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID Tag and all other parent tags" type="existingfile"`
+	InputTags   []string  `flag optional name:"input" help:"Paths to imput files (comma seperated)" type:"existingfile"`
+	RequiredTags []string `flag optional name:"requires" help:"Paths to imput files (comma seperated), which should have a 'required' link to ParentTag" type:"existingfile"`
+	CompilerTags []string `flag optional name:"compiler" help:"Paths to imput files (comma seperated), which should have a 'Compiler' link to ParentTag" type:"existingfile"`
+	OutputFile	 string   `flag required short:"o" name:"output" help:"output file, either .json .xml .cbor .uswid file or a dash '-' for stdout" type:"path"`
+	OutputFormat string   `flag optional name:"output-format" help:"file format of output file. either json, xml, cbor or uswid. if this option is ommited, format will be guessed according to the OutputFile extension"`
 	ZlibCompress bool     `flag optional short:"z" name:"zlib-compress" help:"zlib (RFC 1950) compress output, only possible with .uswid file as output" type:"path"`
 }
 
@@ -51,8 +54,11 @@ type generateTagIDCmd struct {
 }
 
 type printCmd struct {
-	ParentTag      bool `flag optional short:"p" name:"parent-file" help:"It is assumed that for all supplied files, the first tag of each file is a parent tag. goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID Tag and all other parent tags"`
-	InputFiles []string `arg required name:"input-file-paths" help:"Paths to imput files." type:"existingfile"`
+	ParentTag    string   `flag optional name:"parent" help:"It is assumed that for all supplied files, the first tag of each file is a parent tag. goswid will automatically add a link (with dependency link type) between the first given uSWID/CoSWID Tag and all other parent tags" type="existingfile"`
+	InputTags   []string  `flag optional name:"input" help:"Paths to imput files (comma seperated)" type:"existingfile"`
+	RequiredTags []string `flag optional name:"requires" help:"Paths to imput files (comma seperated), which should have a 'required' link to ParentTag" type:"existingfile"`
+	CompilerTags []string `flag optional name:"compiler" help:"Paths to imput files (comma seperated), which should have a 'Compiler' link to ParentTag" type:"existingfile"`
+	OutputFormat string   `flag optional name:"output-format" help:"format in which to pretty print the output. currently only json"`
 }
 
 func (a *addPayloadFileCmd) Run() error {
@@ -80,39 +86,49 @@ func (a *addPayloadFileCmd) Run() error {
 	}
 	utag.Identities[0].Payload.AddFile(f)
 
-	if err := writeFile(a.OutputFile, false, utag); err != nil {
+	if err := writeFile(a.OutputFile, "", false, utag); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (c *convertCmd) Run() error {
-	utag, err := importFiles(c.InputFiles, c.ParentTag)
+	if c.ParentTag == "" && (len(c.CompilerTags) > 0 || len(c.RequiredTags) > 0) {
+		return errors.New("cannot have compiler or required tags without a parent to bind them to")
+	}
+	utag, err := importFiles(c.ParentTag, c.InputTags, c.RequiredTags, c.CompilerTags)
 	if err != nil {
 		return err
 	}
-	if err := writeFile(c.OutputFile, c.ZlibCompress, *utag); err != nil {
+	if err := writeFile(c.OutputFile, c.OutputFormat, c.ZlibCompress, *utag); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (p *printCmd) Run() error {
-	utag, err := importFiles(p.InputFiles, p.ParentTag)
+	if p.ParentTag == "" && (len(p.CompilerTags) > 0 || len(p.RequiredTags) > 0) {
+		return errors.New("cannot have compiler or required tags without a parent to bind them to")
+	}
+	utag, err := importFiles(p.ParentTag, p.InputTags, p.RequiredTags, p.CompilerTags)
 	if err != nil {
 		return err
 	}
-
-	output_buf, err := utag.ToJSON()
-	if err != nil {
-		return fmt.Errorf("uswid_input_tag.ToJSON(): %w", err)
+	switch p.OutputFormat {
+	//TODO pretty print in other formats
+	case "json":
+		output_buf, err := utag.ToJSON()
+		if err != nil {
+			return fmt.Errorf("uswid_input_tag.ToJSON(): %w", err)
+		}
+		var prettyJSON bytes.Buffer
+		if err := json.Indent(&prettyJSON, []byte(output_buf), "", "    "); err != nil {
+			return err
+		}
+		fmt.Println(prettyJSON.String())
+	default:
+		return fmt.Errorf("cannot pretty print %s format", p.OutputFormat)
 	}
-	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, []byte(output_buf), "", "    "); err != nil {
-		return err
-	}
-
-	fmt.Println(prettyJSON.String())
 	return nil
 }
 
@@ -120,7 +136,7 @@ func (g *generateTagIDCmd) Run() {
 	fmt.Println(uuid.NewSHA1(uuid.NameSpaceDNS, []byte(g.UuidgenName)))
 }
 
-func writeFile(filename string, zlib_compress bool, utag uswid.UswidSoftwareIdentity) error {
+func writeFile(filename string, fileFormat string, zlibCompress bool, utag uswid.UswidSoftwareIdentity) error {
 	// check file extension and put CoSWID tags into output file
 	var output_buf []byte
 	of_parts := strings.Split(filename, ".")
@@ -129,47 +145,85 @@ func writeFile(filename string, zlib_compress bool, utag uswid.UswidSoftwareIden
 	}
 
 	var err error
-	switch of_parts[len(of_parts)-1] {
+	switch fileFormat {
 	case "json":
 		output_buf, err = utag.ToJSON()
 	case "xml":
 		output_buf, err = utag.ToXML()
 	case "cbor":
-		output_buf, err = utag.ToCBOR(zlib_compress)
+		output_buf, err = utag.ToCBOR(zlibCompress)
 	case "uswid":
-		output_buf, err = utag.ToUSWID(zlib_compress)
+		output_buf, err = utag.ToUSWID(zlibCompress)
+	case "":
+		switch of_parts[len(of_parts)-1] {
+		case "json":
+			output_buf, err = utag.ToJSON()
+		case "xml":
+			output_buf, err = utag.ToXML()
+		case "cbor":
+			output_buf, err = utag.ToCBOR(zlibCompress)
+		case "uswid":
+			output_buf, err = utag.ToUSWID(zlibCompress)
+		default:
+			return errors.New("could not guess file format by file extension")
+		}
 	default:
-		return errors.New("output file extension not supported")
+		return errors.New("unknown file format")
 	}
 	if err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(filename, output_buf, 0644); err != nil {
-		return err
+	if filename == "-" {
+		fmt.Print(output_buf)
+	} else {
+		if err := ioutil.WriteFile(filename, output_buf, 0644); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func importFiles(filepaths []string, parentTag bool) (*uswid.UswidSoftwareIdentity, error) {
+func importFiles(parentTag string, inputFiles []string, requiredTags []string, compilerTags []string) (*uswid.UswidSoftwareIdentity, error) {
 	var utag uswid.UswidSoftwareIdentity
-	for _, input_file_path := range filepaths {
-		first_tag_of_file := len(utag.Identities)
+	if parentTag != "" {
+		if err := utag.FromFile(parentTag); err != nil {
+			return nil, err
+		}
+	}
+	for _, input_file_path := range requiredTags {
+		index := len(utag.Identities)
 		if err := utag.FromFile(input_file_path); err != nil {
 			return nil, err
 		}
-		// if there is a topfile specified, we create a link between that CoSWID tag and the first of each file, which we assume to be a parent CoSWID Tag above all others
-		if parentTag && first_tag_of_file > 0 {
-			stag := &utag.Identities[0]
-			required_tag := utag.Identities[first_tag_of_file]
 
-			link, err := swid.NewLink(required_tag.TagID.URI(), *swid.NewRel(swid.RelRequires))
-			if err != nil {
-				return nil, err
-			}
-			if err := stag.AddLink(*link); err != nil {
-				return nil, err
-			}
+		// if there is a parentfile specified, we create a link between that CoSWID tag and the first of each file, which we assume to be a parent CoSWID Tag above all others
+		link, err := swid.NewLink(utag.Identities[index].TagID.URI(), *swid.NewRel(swid.RelRequires))
+		if err != nil {
+			return nil, err
+		}
+		if err := utag.Identities[0].AddLink(*link); err != nil {
+			return nil, err
+		}
+	}
+	for _, input_file_path := range compilerTags {
+		index := len(utag.Identities)
+		if err := utag.FromFile(input_file_path); err != nil {
+			return nil, err
+		}
+
+		// if there is a parentfile specified, we create a link between that CoSWID tag and the first of each file, which we assume to be a parent CoSWID Tag above all others
+		link, err := swid.NewLink(utag.Identities[index].TagID.URI(), *swid.NewRel(swid.RelCompiler))
+		if err != nil {
+			return nil, err
+		}
+		if err := utag.Identities[0].AddLink(*link); err != nil {
+			return nil, err
+		}
+	}
+	for _, input_file_path := range inputFiles {
+		if err := utag.FromFile(input_file_path); err != nil {
+			return nil, err
 		}
 	}
 	return &utag, nil
