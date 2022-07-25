@@ -34,6 +34,7 @@ var cli struct {
 
 type addPayloadFileCmd struct {
 	PayloadFileName	string `flag required name:"name" help:"filename that should be added to the payload portion of the CoSWID tag"`
+	PayloadFileVersion string `flag optional name:"version" help:"version of the payload file"`
 	InputFile   string `flag required short:"i" name:"input-file" help:"Path to imput files." type:"existingfile"`
 	OutputFile	string `flag required short:"o" name:"output-file" help:"output file, either .json .xml .cbor or .uswid file" type:"path"`
 }
@@ -71,7 +72,7 @@ func (a *addPayloadFileCmd) Run() error {
 	f.FsName = a.PayloadFileName
 	//f.Root = root
 	//f.Size = &size
-	//f.FileVersion = fileVersion
+	f.FileVersion = a.PayloadFileVersion
 	//f.Hash.HashAlgID = hashAlgID
 	//f.Hash.HashValue = hashValue
 	if utag.Identities[0].Payload == nil {
