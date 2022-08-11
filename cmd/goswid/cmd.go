@@ -15,13 +15,6 @@ import (
 
 type FileType int
 
-const (
-	JSON FileType = iota
-	XML
-	CBOR
-	USWID
-)
-
 var cli struct {
 	Debug         bool               `help:"Enable debug mode"`
 
