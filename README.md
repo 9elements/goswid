@@ -4,7 +4,7 @@ This project is very similiar and intended to be compatible with [python-uswid](
 
 It's basically a tool to convert SWID (Software Identification Tags) and CoSWID (Consise Software Identification Tags) between different formats.
 
-It's currently capable of converting SWID/CoSWID between JSON, XML, CBOR and uSWID+CBOR
+It's currently capable of converting SWID/CoSWID between JSON, XML, CBOR and uSWID+CBOR.
 
 If embedded into a coreboot build, one can use this tool to extract all SBOM Information out of an compiled coreboot image and save it in a format of choice. For example:
 ```sh
@@ -23,5 +23,26 @@ The parameters requires/input/compiler basically create a link between your appl
 The relationships can for example be used for beautiful graphs or security audits.
 
 pkg/uswid contains a simple/small uswid implementation and can be used by other go tools like it is used by goswid itself.
+
+## uSWID
+uSWID is basically a very small wrapper around CoSWID, which contains the following:
+ 0               1               2               3
+ 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
+|---------------------------------------------------------------|
+|                          MAGIC VALUE                          |
+|---------------------------------------------------------------|
+|                          MAGIC VALUE                          |
+|---------------------------------------------------------------|
+|                          MAGIC VALUE                          |
+|---------------------------------------------------------------|
+|                          MAGIC VALUE                          |
+|---------------------------------------------------------------|
+|Header Version |          Header Size          |               |
+|---------------------------------------------------------------|
+|                         Payload Size          |C|R|R|R|R|R|R|R|
+|---------------------------------------------------------------|
+|                         CoSWID CBOR Data...                   |
+
+The MAGIC VALUE is a 2 byte value which the following data as uSWID data. It is used to find uSWID data in an otherwise unknown blob. Payload size is the size of the following CoSWID CBOR Data. Using the Payload Size multiple CoSWID tags can be concatenated after the other. The basic Idea is that a program reads as CoSWID Tags as long as there are still payload bytes left from Payload Size. The last byte of the Header defines a set of flags. Currently only the compression Flag is implemented and the other ones are reserved. The uSWID Header is subject to change.
 
 for more Information, see: [python-uswid](https://github.com/hughsie/python-uswid)
