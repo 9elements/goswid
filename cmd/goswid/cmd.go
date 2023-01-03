@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
+	"strconv"
 
 	"github.com/9elements/goswid/pkg/uswid"
 	"github.com/CodingVoid/swid"
@@ -166,13 +167,56 @@ func (g *generateTagIDCmd) Run() {
 	fmt.Println(uuid.NewSHA1(uuid.NameSpaceDNS, []byte(g.UuidgenName)))
 }
 
+func recursivePlantUML(stringBuilder *strings.Builder, beenThere []bool, uid *uswid.UswidSoftwareIdentity, i int) {
+	beenThere[i] = true
+	currentId := uid.Identities[i]
+	stringBuilder.WriteString(`object "`)
+	stringBuilder.WriteString(currentId.SoftwareName)
+	stringBuilder.WriteString(`" as `)
+	stringBuilder.WriteString(strconv.Itoa(i))
+	stringBuilder.WriteRune('\n')
+	if currentId.Links == nil {
+		return
+	}
+	for _, link := range *currentId.Links {
+		//TODO comparing the string values is quite slow, but the values are probably saved as strings inside link.Rel
+		if link.Rel.String() == swid.NewRel(swid.RelRequires).String() || link.Rel.String() == swid.NewRel(swid.RelCompiler).String() {
+			for index, id := range uid.Identities {
+				// speed it up a bit by ignoring tag's where we have already been
+				if beenThere[index] {
+					continue
+				}
+				if id.TagID.URI() == link.Href {
+					recursivePlantUML(stringBuilder, beenThere[:], uid, index)
+					stringBuilder.WriteByte('"')
+					stringBuilder.WriteString(strconv.Itoa(index))
+					stringBuilder.WriteString(`" --> "`)
+					stringBuilder.WriteString(strconv.Itoa(i))
+					stringBuilder.WriteByte('"')
+					stringBuilder.WriteString("\n")
+				}
+			}
+		}
+	}
+}
+
+func ToPlantUML(id *uswid.UswidSoftwareIdentity) ([]byte, error) {
+	var strbuilder strings.Builder
+	beenThere := make([]bool, len(id.Identities))
+	strbuilder.WriteString("@startuml\n")
+	for i, been := range beenThere {
+		if been {
+			continue
+		}
+		recursivePlantUML(&strbuilder, beenThere[:], id, i)
+	}
+	strbuilder.WriteString("@enduml")
+	return []byte(strbuilder.String()), nil
+}
+
 func writeFile(filename string, fileFormat string, zlibCompress bool, utag uswid.UswidSoftwareIdentity) error {
 	// check file extension and put CoSWID tags into output file
 	var output_buf []byte
-	of_parts := strings.Split(filename, ".")
-	if len(of_parts) < 2 {
-		return errors.New("no file extension found")
-	}
 
 	var err error
 	switch fileFormat {
@@ -184,7 +228,13 @@ func writeFile(filename string, fileFormat string, zlibCompress bool, utag uswid
 		output_buf, err = utag.ToCBOR(zlibCompress)
 	case "uswid":
 		output_buf, err = utag.ToUSWID(zlibCompress)
+	case "plantuml":
+		output_buf, err = ToPlantUML(&utag)
 	case "":
+		of_parts := strings.Split(filename, ".")
+		if len(of_parts) < 2 {
+			return errors.New("no file extension found")
+		}
 		switch of_parts[len(of_parts)-1] {
 		case "json":
 			output_buf, err = utag.ToJSON()
@@ -194,6 +244,8 @@ func writeFile(filename string, fileFormat string, zlibCompress bool, utag uswid
 			output_buf, err = utag.ToCBOR(zlibCompress)
 		case "uswid":
 			output_buf, err = utag.ToUSWID(zlibCompress)
+		case "plantuml":
+			output_buf, err = ToPlantUML(&utag)
 		default:
 			return errors.New("could not guess file format by file extension")
 		}
