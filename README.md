@@ -45,4 +45,12 @@ uSWID is basically a very small wrapper around CoSWID, which contains the follow
 
 The MAGIC VALUE is a 2 byte value which the following data as uSWID data. It is used to find uSWID data in an otherwise unknown blob. Payload size is the size of the following CoSWID CBOR Data. Using the Payload Size multiple CoSWID tags can be concatenated after the other. The basic Idea is that a program reads as CoSWID Tags as long as there are still payload bytes left from Payload Size. The last byte of the Header defines a set of flags. Currently only the compression Flag is implemented and the other ones are reserved. The uSWID Header is subject to change.
 
+## PlantUML
+You can also convert your uSWID File to a [PlantUML](https://plantuml.com) Diagram:
+```sh
+go run ./cmd/goswid convert -i coreboot.rom -o sbom.plantuml
+plantuml sbom.plantuml
+[your-image-viewer] sbom.png
+```
+
 for more Information, see: [python-uswid](https://github.com/hughsie/python-uswid)
